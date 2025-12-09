@@ -1,0 +1,10 @@
+Testing Gemini API with gemini-flash-latest...
+Error detected:
+ApiError: {"error":{"code":403,"message":"The caller does not have permission","status":"PERMISSION_DENIED"}}
+    at throwErrorIfNotOK (file:///home/lee/Documents/The%20Chef's%20Muse/node_modules/@google/genai/dist/node/index.mjs:11984:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///home/lee/Documents/The%20Chef's%20Muse/node_modules/@google/genai/dist/node/index.mjs:11704:13
+    at async Models.generateContent (file:///home/lee/Documents/The%20Chef's%20Muse/node_modules/@google/genai/dist/node/index.mjs:13034:24)
+    at async test (file:///home/lee/Documents/The%20Chef's%20Muse/test_genai.js:9:26) {
+  status: 403
+}

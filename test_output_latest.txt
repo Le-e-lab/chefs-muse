@@ -1,0 +1,6 @@
+Testing Gemini API with gemini-flash-latest...
+Response received:
+Error detected:
+TypeError: response.text is not a function
+    at test (file:///home/lee/Documents/The%20Chef's%20Muse/test_genai.js:18:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
