@@ -419,7 +419,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({ recipe, onBack, onSave, onRemix
             )}
           </div>
 
-          <div className="space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <div className="flex items-center justify-between text-xs font-mono tracking-widest uppercase">
               <div className="flex items-center gap-3">
                 <span className="text-amber-350">{recipe.cuisineStyle}</span>
