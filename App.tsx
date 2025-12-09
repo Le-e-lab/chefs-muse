@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import CameraCapture from './components/CameraCapture';
 import RecipeView from './components/RecipeView';
 import LandingPage from './components/LandingPage';
@@ -240,6 +241,15 @@ const App: React.FC = () => {
 
       {/* Viewport Area */}
       <main className="flex-1 relative overflow-hidden">
+        <Helmet>
+          <title>The Chef's Muse | AI-Powered Cooking Companion</title>
+          <meta name="description" content="Turn your fridge ingredients into culinary masterpieces with AI. Visual recipes, voice guidance, and zero waste cooking." />
+          <meta name="theme-color" content="#0c0a09" />
+          <meta property="og:title" content="The Chef's Muse - Cook with AI" />
+          <meta property="og:description" content="No recipes? No problem. Use what you have." />
+          <meta property="og:image" content="https://images.unsplash.com/photo-1556910103-1c02745a30bf?auto=format&fit=crop&q=80&w=1200" />
+          <meta property="og:type" content="website" />
+        </Helmet>
 
         {/* State: Landing Page */}
         {appState === AppState.LANDING && (

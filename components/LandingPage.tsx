@@ -38,23 +38,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onAbout, onCookbook,
         </p>
 
         <div className="flex flex-col items-center gap-6">
-          <button
-            onClick={onStart}
-            className="group relative px-10 py-5 bg-stone-100 text-stone-950 rounded-full font-serif font-bold text-lg tracking-wide hover:bg-amber-350 transition-all duration-500 flex items-center gap-3 overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(217,185,100,0.4)] hover:scale-105"
-          >
-            <span className="relative z-10">Open Your Fridge</span>
-            <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <button
+              onClick={onStart}
+              className="group relative w-full px-8 py-4 bg-stone-100 text-stone-950 rounded-xl font-serif font-bold text-lg tracking-wide hover:bg-amber-350 transition-all duration-500 flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_40px_rgba(217,185,100,0.4)] hover:scale-[1.02]"
+            >
+              <span className="relative z-10">Open Your Fridge</span>
+              <ArrowRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+            </button>
 
-            {/* Button Hover Glow */}
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-          </button>
-
-          <button
-            onClick={onIngredientsInput}
-            className="text-amber-350/80 hover:text-amber-350 font-serif italic text-sm md:text-base border-b border-transparent hover:border-amber-350 transition-all pb-1"
-          >
-            I have ingredients, but no ideas...
-          </button>
+            <button
+              onClick={onIngredientsInput}
+              className="w-full px-8 py-3 rounded-xl border border-stone-800 text-stone-400 font-medium hover:text-amber-350 hover:border-amber-350/50 hover:bg-stone-900 transition-all flex items-center justify-center gap-2 text-sm"
+            >
+              <span className="opacity-70">No camera?</span> Use Secret Menu
+            </button>
+          </div>
 
           <div className="flex gap-4">
             <button
