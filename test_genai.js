@@ -1,6 +1,11 @@
+import 'dotenv/config';
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = "AIzaSyBQSCY0CsAOB46rP8lMmdSc0VAdqCQKWUE";
+const apiKey = process.env.VITE_GEMINI_API_KEY;
+if (!apiKey) {
+    console.error("Error: VITE_GEMINI_API_KEY is not set in environment variables.");
+    process.exit(1);
+}
 const ai = new GoogleGenAI({ apiKey });
 
 async function test() {
