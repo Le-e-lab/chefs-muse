@@ -113,7 +113,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({ recipe, onBack, onSave, onRemix
       const lastResult = event.results[event.results.length - 1];
       const transcript = lastResult[0].transcript.toLowerCase().trim();
 
-      console.log("Voice Command:", transcript);
+
       setLastVoiceCommand(transcript);
 
       // Clear command feedback after a delay

@@ -1,3 +1,0 @@
-Testing image gen with gemini-flash-latest...
-Success with gemini-flash-latest
-No inlineData in response.
