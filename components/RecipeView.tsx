@@ -8,6 +8,7 @@ interface RecipeViewProps {
   onBack: () => void;
   onSave: (recipe: Recipe) => void;
   onRemix: (constraints: string[]) => void;
+  onRefine: (missingIngredients: string[]) => void;
   isSaved: boolean;
 }
 
@@ -20,7 +21,7 @@ const CONSTRAINTS_OPTIONS = [
   "No Stove", "Vegetarian", "Vegan", "Microwave Only", "Under 15m", "One Pot", "High Protein"
 ];
 
-const RecipeView: React.FC<RecipeViewProps> = ({ recipe, onBack, onSave, onRemix, isSaved }) => {
+const RecipeView: React.FC<RecipeViewProps> = ({ recipe, onBack, onSave, onRemix, onRefine, isSaved }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1); // -1 is Overview
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generationFailed, setGenerationFailed] = useState(false);
@@ -244,6 +245,38 @@ const RecipeView: React.FC<RecipeViewProps> = ({ recipe, onBack, onSave, onRemix
   };
 
   const enterCookingMode = () => {
+    // Check if ingredient selection logic should apply
+    const totalFound = recipe.ingredientsFound.length;
+    const totalPantry = recipe.pantryItemsNeeded.length;
+    const totalIngredients = totalFound + totalPantry;
+
+    // If user has checked some ingredients, but not all of them,
+    // we assume they want to "refine" the recipe to exclude the unchecked ones.
+    // If they checked NOTHING, we assume they have everything (default flow).
+    if (checkedIngredients.size > 0 && checkedIngredients.size < totalIngredients) {
+      const missingIngredients: string[] = [];
+
+      // Check Found ingredients
+      recipe.ingredientsFound.forEach((ing, i) => {
+        if (!checkedIngredients.has(`found-${i}`)) {
+          missingIngredients.push(ing);
+        }
+      });
+
+      // Check Pantry ingredients
+      recipe.pantryItemsNeeded.forEach((ing, i) => {
+        if (!checkedIngredients.has(`pantry-${i}`)) {
+          missingIngredients.push(ing);
+        }
+      });
+
+      if (missingIngredients.length > 0) {
+        onRefine(missingIngredients);
+        return;
+      }
+    }
+
+    // Default behavior
     if (currentStepIndex === -1) setCurrentStepIndex(0);
     setIsCookingMode(true);
   }

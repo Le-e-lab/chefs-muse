@@ -165,6 +165,35 @@ const App: React.FC = () => {
     }
   }
 
+  const handleRefine = async (missingIngredients: string[]) => {
+    setAppState(AppState.PROCESSING);
+    setLoadingThought("Removing missing ingredients...");
+    setError(null);
+
+    // Create specific constraint for missing items
+    const exclusionConstraint = `Exclude ingredients: ${missingIngredients.join(', ')}`;
+    // Keep existing constraints if any, and add the new one
+    const currentConstraints = recipe?.constraints || [];
+    const newConstraints = [...currentConstraints, exclusionConstraint];
+
+    try {
+      const generatedRecipe = await generateRecipeFromInput(
+        currentSessionImages,
+        currentSessionAudio,
+        undefined,
+        currentSessionText,
+        newConstraints
+      );
+
+      setRecipe(generatedRecipe);
+      setIsCurrentRecipeSaved(false);
+      setAppState(AppState.RECIPE_VIEW);
+
+    } catch (e: any) {
+      handleError(e);
+    }
+  }
+
   const handleError = (e: any) => {
     console.error("App Error:", e);
     let msg = "The Muse was silent.";
@@ -346,6 +375,7 @@ const App: React.FC = () => {
               onBack={handleBackFromRecipe}
               onSave={saveToHistory}
               onRemix={handleRemix}
+              onRefine={handleRefine}
               isSaved={isCurrentRecipeSaved}
             />
           </div>
