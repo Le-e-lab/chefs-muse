@@ -49,7 +49,7 @@ export const generateRecipeFromInput = async (
   textPrompt?: string,
   constraints: string[] = []
 ): Promise<Recipe> => {
-  if (!getApiKey()) throw new Error("API Key missing");
+  if (!getApiKey()) throw new Error(`API Key missing (Length: ${getApiKey().length})`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
@@ -136,7 +136,7 @@ export const generateDishImage = async (title: string, description: string): Pro
 };
 
 export const generateTTS = async (text: string): Promise<string> => {
-  if (!getApiKey()) throw new Error("API Key missing");
+  if (!getApiKey()) throw new Error(`API Key missing (Length: ${getApiKey().length})`);
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   try {
