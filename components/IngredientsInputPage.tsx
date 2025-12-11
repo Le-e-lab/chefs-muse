@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ChefHat, Sparkles, AlertCircle } from 'lucide-react';
+import { GenerationMode, MealType } from '../types';
 
 interface IngredientsInputPageProps {
     onBack: () => void;
-    onSubmit: (text: string) => void;
+    onSubmit: (text: string, mode: GenerationMode, mealTypes?: MealType[]) => void;
 }
 
 const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onSubmit }) => {
     const [input, setInput] = useState('');
+    const [mode, setMode] = useState<GenerationMode>(GenerationMode.INSTANT);
+    const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>(['Dinner']);
 
     const handleSubmit = () => {
         if (input.trim().length > 0) {
-            onSubmit(input);
+            onSubmit(
+                input,
+                mode,
+                mode === GenerationMode.MEAL_PREP ? selectedMealTypes : undefined
+            );
         }
     };
 
@@ -20,6 +27,14 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
             handleSubmit();
         }
     };
+
+    const toggleMealType = (t: MealType) => {
+        setSelectedMealTypes(prev => {
+            // Don't allow empty selection if in meal prep mode (force at least one)
+            if (prev.includes(t) && prev.length === 1) return prev;
+            return prev.includes(t) ? prev.filter(i => i !== t) : [...prev, t];
+        });
+    }
 
     return (
         <div className="h-full w-full bg-stone-950 flex flex-col animate-fade-in text-stone-100 relative overflow-hidden">
@@ -62,18 +77,61 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
                     </p>
                 </div>
 
-                <div className="w-full relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-stone-800/10 rounded-2xl blur-sm transition-opacity opacity-0 group-focus-within:opacity-100"></div>
-                    <textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="I have: some slightly stale bread, 2 eggs, hot sauce, and half a lemon..."
-                        className="w-full h-48 md:h-64 bg-stone-900/80 border border-stone-800 rounded-2xl p-6 text-lg text-white placeholder-stone-600 focus:outline-none focus:border-amber-350/50 focus:ring-1 focus:ring-amber-350/20 transition-all resize-none shadow-xl font-serif leading-relaxed relative z-10"
-                        autoFocus
-                    />
-                    <div className="absolute bottom-4 right-4 text-xs text-stone-600 z-20 pointer-events-none">
-                        CMD + Enter to submit
+                <div className="w-full relative group space-y-6">
+
+                    {/* Mode Selector */}
+                    <div className="flex flex-col items-center gap-4 animate-fade-in">
+                        <div className="flex bg-stone-900/80 backdrop-blur-md rounded-full p-1 border border-stone-800">
+                            <button
+                                onClick={() => setMode(GenerationMode.INSTANT)}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${mode === GenerationMode.INSTANT ? 'bg-amber-350 text-stone-900 shadow-lg' : 'text-stone-400 hover:text-white'
+                                    }`}
+                            >
+                                Instant Recipe
+                            </button>
+                            <button
+                                onClick={() => setMode(GenerationMode.MEAL_PREP)}
+                                className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${mode === GenerationMode.MEAL_PREP ? 'bg-amber-350 text-stone-900 shadow-lg' : 'text-stone-400 hover:text-white'
+                                    }`}
+                            >
+                                Student Meal Prep
+                            </button>
+                        </div>
+
+                        {/* Meal Type Selector */}
+                        <div className={`transition-all duration-300 overflow-hidden ${mode === GenerationMode.MEAL_PREP ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+                            <div className="flex gap-2 bg-stone-900/50 backdrop-blur-sm p-2 rounded-xl border border-stone-800">
+                                {(['Breakfast', 'Lunch', 'Dinner'] as MealType[]).map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => toggleMealType(type)}
+                                        className={`px-4 py-2 rounded-lg text-[10px] uppercase font-bold border transition-all ${selectedMealTypes.includes(type)
+                                                ? 'bg-amber-350/20 border-amber-350 text-amber-350'
+                                                : 'bg-transparent border-stone-800 text-stone-500 hover:border-stone-600'
+                                            }`}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-stone-800/10 rounded-2xl blur-sm transition-opacity opacity-0 group-focus-within:opacity-100"></div>
+                        <textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={mode === GenerationMode.INSTANT
+                                ? "I have: some slightly stale bread, 2 eggs, hot sauce, and half a lemon..."
+                                : "For my week, I have: 2kg rice, 10 eggs, frozen peas, chicken breast, and $20 budget..."}
+                            className="w-full h-48 md:h-64 bg-stone-900/80 border border-stone-800 rounded-2xl p-6 text-lg text-white placeholder-stone-600 focus:outline-none focus:border-amber-350/50 focus:ring-1 focus:ring-amber-350/20 transition-all resize-none shadow-xl font-serif leading-relaxed relative z-10"
+                            autoFocus
+                        />
+                        <div className="absolute bottom-4 right-4 text-xs text-stone-600 z-20 pointer-events-none">
+                            CMD + Enter to submit
+                        </div>
                     </div>
                 </div>
 
@@ -92,7 +150,9 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
                         className="group relative px-10 py-4 bg-stone-100 text-stone-950 rounded-full font-serif font-bold text-lg tracking-wide hover:bg-amber-350 disabled:opacity-50 disabled:hover:bg-stone-100 transition-all duration-300 flex items-center gap-3 shadow-lg hover:scale-105 hover:shadow-amber-900/20"
                     >
                         <Sparkles className="w-5 h-5 text-amber-600 group-hover:text-stone-900 transition-colors" />
-                        <span>Invent Recipe</span>
+                        <span>
+                            {mode === GenerationMode.MEAL_PREP ? 'Generate Weekly Plan' : 'Invent Recipe'}
+                        </span>
                     </button>
                 </div>
 

@@ -6,8 +6,9 @@ import LandingPage from './components/LandingPage';
 import AboutPage from './components/AboutPage';
 import Cookbook from './components/Cookbook';
 import IngredientsInputPage from './components/IngredientsInputPage';
-import { AppState, CaptureData, Recipe } from './types';
-import { generateRecipeFromInput } from './services/geminiService';
+import MealPlanView from './components/MealPlanView';
+import { AppState, CaptureData, Recipe, MealPlan, GenerationMode, MealType } from './types';
+import { generateRecipeFromInput, generateMealPlanFromInput } from './services/geminiService';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 const LOADING_THOUGHTS = [
@@ -18,13 +19,17 @@ const LOADING_THOUGHTS = [
   "Inventing a new flavor...",
   "Asking the stars for salt...",
   "Simmering ideas...",
-  "Pairing flavors..."
+  "Pairing flavors...",
+  "Designing your week...",
+  "Budgeting the pantry...",
+  "Organizing the fridge..."
 ];
 
 const App: React.FC = () => {
   // Start at LANDING instead of IDLE
   const [appState, setAppState] = useState<AppState>(AppState.LANDING);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [history, setHistory] = useState<Recipe[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
@@ -104,25 +109,40 @@ const App: React.FC = () => {
     setCurrentSessionText(undefined);
 
     try {
-      // API call to Gemini with optional constraints
-      const generatedRecipe = await generateRecipeFromInput(
-        data.images,
-        data.audio,
-        data.audioMimeType,
-        undefined,
-        data.constraints || []
-      );
+      if (data.mode === GenerationMode.MEAL_PREP) {
+        // GENERATE MEAL PLAN
+        const generatedPlan = await generateMealPlanFromInput(
+          data.images,
+          data.audio,
+          data.audioMimeType,
+          undefined,
+          data.constraints || [],
+          data.mealTypes
+        );
+        setMealPlan(generatedPlan);
+        setAppState(AppState.MEAL_PLAN_VIEW);
 
-      setRecipe(generatedRecipe);
-      setIsCurrentRecipeSaved(false); // New capture is not saved by default
-      setAppState(AppState.RECIPE_VIEW);
+      } else {
+        // GENERATE INSTANT RECIPE
+        const generatedRecipe = await generateRecipeFromInput(
+          data.images,
+          data.audio,
+          data.audioMimeType,
+          undefined,
+          data.constraints || []
+        );
+
+        setRecipe(generatedRecipe);
+        setIsCurrentRecipeSaved(false);
+        setAppState(AppState.RECIPE_VIEW);
+      }
 
     } catch (e: any) {
       handleError(e);
     }
   };
 
-  const handleTextGeneration = async (text: string) => {
+  const handleTextGeneration = async (text: string, mode: GenerationMode = GenerationMode.INSTANT, mealTypes: MealType[] = ['Dinner']) => {
     setAppState(AppState.PROCESSING);
     setError(null);
     setErrorDetails(null);
@@ -133,12 +153,26 @@ const App: React.FC = () => {
     setCurrentSessionText(text);
 
     try {
-      // API call to Gemini with text only
-      const generatedRecipe = await generateRecipeFromInput([], null, undefined, text);
+      if (mode === GenerationMode.MEAL_PREP) {
+        // GENERATE MEAL PLAN
+        const generatedPlan = await generateMealPlanFromInput(
+          [],
+          null,
+          undefined,
+          text,
+          [], // Constraints could be added to text input if needed later
+          mealTypes
+        );
+        setMealPlan(generatedPlan);
+        setAppState(AppState.MEAL_PLAN_VIEW);
 
-      setRecipe(generatedRecipe);
-      setIsCurrentRecipeSaved(false); // New capture is not saved by default
-      setAppState(AppState.RECIPE_VIEW);
+      } else {
+        // INSTANT
+        const generatedRecipe = await generateRecipeFromInput([], null, undefined, text);
+        setRecipe(generatedRecipe);
+        setIsCurrentRecipeSaved(false);
+        setAppState(AppState.RECIPE_VIEW);
+      }
     } catch (e: any) {
       handleError(e);
     }
@@ -228,6 +262,7 @@ const App: React.FC = () => {
     // Return to Camera view (IDLE)
     setAppState(AppState.IDLE);
     setRecipe(null);
+    setMealPlan(null);
     setError(null);
   };
 
@@ -310,7 +345,7 @@ const App: React.FC = () => {
               recipes={history}
               onSelectRecipe={handleSelectRecipe}
               onBack={handleBackToLanding}
-              onGenerateFromText={handleTextGeneration}
+              onGenerateFromText={(text) => handleTextGeneration(text)} // Adapter for existing signature
               onDeleteRecipe={deleteFromHistory}
             />
           </div>
@@ -381,6 +416,16 @@ const App: React.FC = () => {
               onRemix={handleRemix}
               onRefine={handleRefine}
               isSaved={isCurrentRecipeSaved}
+            />
+          </div>
+        )}
+
+        {/* State: Meal Plan View */}
+        {appState === AppState.MEAL_PLAN_VIEW && mealPlan && (
+          <div className="absolute inset-0 bg-stone-900 z-40 animate-fade-in">
+            <MealPlanView
+              plan={mealPlan}
+              onBack={handleBackToLanding}
             />
           </div>
         )}

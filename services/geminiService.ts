@@ -168,3 +168,107 @@ export const generateTTS = async (text: string): Promise<string> => {
     throw error;
   }
 };
+
+// --- MEAL PREP MODE ---
+
+const mealPlanSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    description: { type: Type.STRING },
+    shoppingList: { type: Type.ARRAY, items: { type: Type.STRING } },
+    days: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          day: { type: Type.STRING }, // e.g., "Monday" or "Day 1"
+          meals: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING, enum: ['Breakfast', 'Lunch', 'Dinner'] },
+                recipe: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    prepTime: { type: Type.STRING }
+                  },
+                  required: ['title', 'description', 'prepTime']
+                }
+              },
+              required: ['type', 'recipe']
+            }
+          }
+        },
+        required: ['day', 'meals']
+      }
+    }
+  },
+  required: ['title', 'description', 'days', 'shoppingList']
+};
+
+export const generateMealPlanFromInput = async (
+  images: string[],
+  audioBase64: string | null,
+  audioMimeType?: string,
+  textPrompt?: string,
+  constraints: string[] = [],
+  mealTypes: string[] = ['Dinner'] // Default to Dinner only
+): Promise<any> => {
+  if (!getApiKey()) throw new Error("API Key missing");
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const parts: any[] = [];
+
+  // Add inputs
+  images.forEach(img => parts.push({ inlineData: { mimeType: 'image/jpeg', data: img } }));
+  if (audioBase64) parts.push({ inlineData: { mimeType: audioMimeType || 'audio/wav', data: audioBase64 } });
+
+  // Construct Prompt
+  const mealsToPrep = mealTypes.join(', ');
+  const constraintText = constraints.length > 0 ? `Constraints: ${constraints.join(', ')}.` : "";
+
+  const systemPrompt = `
+    You are The Chef's Muse, specializing in student meal prep.
+    Create a practical 5-day meal plan based on the available ingredients.
+    Focus on:
+    1. Minimizing waste (reuse ingredients across days).
+    2. Student-friendly budget and simplicity.
+    3. Generate plans ONLY for: ${mealsToPrep}.
+    
+    ${constraintText}
+    
+    If text/audio is provided ("${textPrompt || ''}"), use it as context.
+    Output purely strictly valid JSON matching the schema.
+  `;
+
+  parts.push({ text: systemPrompt });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: { parts },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: mealPlanSchema,
+      }
+    });
+
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("No response generated");
+
+    const rawPlan = JSON.parse(text);
+
+    return {
+      ...rawPlan,
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      createdAt: Date.now(),
+    };
+
+  } catch (error) {
+    console.error("Meal Plan Generation Error:", error);
+    throw error;
+  }
+};

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Camera, Mic, Square, AlertTriangle, RefreshCw, X, SlidersHorizontal } from 'lucide-react';
-import { CaptureData } from '../types';
+import { CaptureData, GenerationMode, MealType } from '../types';
 
 interface CameraCaptureProps {
   onCapture: (data: CaptureData) => void;
@@ -18,7 +18,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<'PERMISSION' | 'HARDWARE' | 'GENERIC'>('GENERIC');
@@ -26,14 +26,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
   const [selectedConstraints, setSelectedConstraints] = useState<string[]>([]);
   const [showConstraints, setShowConstraints] = useState(false);
 
+  // New State for Meal Prep
+  const [mode, setMode] = useState<GenerationMode>(GenerationMode.INSTANT);
+  const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>(['Dinner']);
+
   // Initialize Camera
   useEffect(() => {
     const startCamera = async () => {
       setError(null);
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: true 
+          audio: true
         });
         streamRef.current = stream;
         if (videoRef.current) {
@@ -94,10 +98,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
   }, []);
 
   const toggleConstraint = (c: string) => {
-    setSelectedConstraints(prev => 
+    setSelectedConstraints(prev =>
       prev.includes(c) ? prev.filter(i => i !== c) : [...prev, c]
     );
   };
+
+  const toggleMealType = (t: MealType) => {
+    setSelectedMealTypes(prev => {
+      // Don't allow empty selection if in meal prep mode (force at least one)
+      if (prev.includes(t) && prev.length === 1) return prev;
+      return prev.includes(t) ? prev.filter(i => i !== t) : [...prev, t];
+    });
+  }
 
   const startRecording = () => {
     if (!streamRef.current || isProcessing) return;
@@ -112,18 +124,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
 
     setIsRecording(true);
     audioChunksRef.current = [];
-    
+
     // Capture initial frame
     const frames: string[] = [];
     const firstFrame = captureFrame();
-    if(firstFrame) frames.push(firstFrame);
+    if (firstFrame) frames.push(firstFrame);
 
     // Setup MediaRecorder for audio
     let mimeType = 'audio/webm';
     if (MediaRecorder.isTypeSupported('audio/mp4')) {
-      mimeType = 'audio/mp4'; 
+      mimeType = 'audio/mp4';
     } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      mimeType = 'audio/webm;codecs=opus'; 
+      mimeType = 'audio/webm;codecs=opus';
     }
 
     try {
@@ -147,12 +159,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
 
       mediaRecorder.onstop = async () => {
         clearInterval(frameInterval);
-        
+
         // Convert audio blob to base64
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         if (audioBlob.size === 0) {
-           console.warn("Audio recording empty");
-           // We can still proceed with images only if audio failed, but let's be strict for the "Vibe"
+          console.warn("Audio recording empty");
+          // We can still proceed with images only if audio failed, but let's be strict for the "Vibe"
         }
 
         const reader = new FileReader();
@@ -163,7 +175,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
             images: frames, // Send all captured frames
             audio: base64Audio,
             audioMimeType: mimeType,
-            constraints: selectedConstraints
+            constraints: selectedConstraints,
+            mode: mode,
+            mealTypes: mode === GenerationMode.MEAL_PREP ? selectedMealTypes : undefined
           });
         };
       };
@@ -203,21 +217,21 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
         </div>
         <div className="space-y-2">
           <h3 className="text-2xl font-serif text-white">
-            {errorType === 'PERMISSION' ? 'Permission Required' : 
-             errorType === 'HARDWARE' ? 'Device Error' : 'Connection Error'}
+            {errorType === 'PERMISSION' ? 'Permission Required' :
+              errorType === 'HARDWARE' ? 'Device Error' : 'Connection Error'}
           </h3>
           <p className="text-stone-400 max-w-xs mx-auto text-sm leading-relaxed">{error}</p>
         </div>
-        
+
         <div className="flex gap-4">
-          <button 
+          <button
             onClick={onBack}
             className="px-6 py-3 border border-stone-700 text-stone-300 rounded-full hover:bg-stone-800 transition-colors"
           >
             Cancel
           </button>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="flex items-center gap-2 px-6 py-3 bg-stone-800 hover:bg-stone-700 text-white rounded-full transition-all text-sm font-medium tracking-wide uppercase"
           >
             <RefreshCw size={16} />
@@ -231,21 +245,21 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
   return (
     <div className="relative h-full w-full bg-black overflow-hidden flex flex-col">
       {/* Video Preview */}
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        muted 
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
         className="absolute inset-0 w-full h-full object-cover opacity-80"
       />
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Overlay UI */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 flex flex-col justify-between p-6">
-        
+
         {/* Header with Back Button */}
         <div className="flex items-start justify-between">
-          <button 
+          <button
             onClick={onBack}
             className="p-3 bg-black/40 backdrop-blur-md rounded-full text-white/80 hover:bg-black/60 transition-colors"
           >
@@ -253,11 +267,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
           </button>
 
           <div className="text-right pt-2">
-             <h2 className="text-stone-300 text-[10px] font-medium tracking-widest uppercase mb-1">The Chef's Muse</h2>
-             <div className="flex items-center gap-2 justify-end">
-               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-               <span className="text-stone-400 text-xs">Live Vision</span>
-             </div>
+            <h2 className="text-stone-300 text-[10px] font-medium tracking-widest uppercase mb-1">The Chef's Muse</h2>
+            <div className="flex items-center gap-2 justify-end">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-stone-400 text-xs">Live Vision</span>
+            </div>
           </div>
         </div>
 
@@ -271,36 +285,75 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
 
         {/* Bottom Controls */}
         <div className="flex flex-col items-center gap-6 mb-8">
-          
-          {/* Constraints Selector */}
+
+          {/* Mode Selector */}
           {!isRecording && (
-            <div className="w-full">
-              <div className="flex justify-center mb-2">
-                 <button 
-                  onClick={() => setShowConstraints(!showConstraints)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${selectedConstraints.length > 0 || showConstraints ? 'bg-amber-350 text-stone-900' : 'bg-black/40 text-stone-300 backdrop-blur-md'}`}
-                 >
-                   <SlidersHorizontal size={14} />
-                   {selectedConstraints.length > 0 ? `${selectedConstraints.length} Filter${selectedConstraints.length > 1 ? 's' : ''}` : 'Kitchen Constraints'}
-                 </button>
+            <div className="flex flex-col items-center gap-4 w-full">
+
+              {/* Main Mode Toggle */}
+              <div className="flex bg-stone-800/80 backdrop-blur-md rounded-full p-1 border border-stone-700">
+                <button
+                  onClick={() => setMode(GenerationMode.INSTANT)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${mode === GenerationMode.INSTANT ? 'bg-amber-350 text-stone-900 shadow-lg' : 'text-stone-400 hover:text-white'
+                    }`}
+                >
+                  Instant Recipe
+                </button>
+                <button
+                  onClick={() => setMode(GenerationMode.MEAL_PREP)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${mode === GenerationMode.MEAL_PREP ? 'bg-amber-350 text-stone-900 shadow-lg' : 'text-stone-400 hover:text-white'
+                    }`}
+                >
+                  Student Meal Prep
+                </button>
               </div>
-              
-              {/* Expandable constraints */}
-              <div className={`overflow-hidden transition-all duration-300 ease-out ${showConstraints ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto p-2">
-                  {CONSTRAINTS.map(c => (
+
+              {/* Meal Type Selector (Only for Meal Prep) */}
+              <div className={`transition-all duration-300 overflow-hidden ${mode === GenerationMode.MEAL_PREP ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="flex gap-2 bg-black/40 backdrop-blur-sm p-2 rounded-xl border border-white/10">
+                  {(['Breakfast', 'Lunch', 'Dinner'] as MealType[]).map(type => (
                     <button
-                      key={c}
-                      onClick={() => toggleConstraint(c)}
-                      className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider border transition-all ${
-                        selectedConstraints.includes(c) 
-                          ? 'bg-amber-350 border-amber-350 text-stone-900 font-bold' 
-                          : 'bg-black/60 border-stone-600 text-stone-400 hover:border-amber-350/50'
-                      }`}
+                      key={type}
+                      onClick={() => toggleMealType(type)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold border transition-all ${selectedMealTypes.includes(type)
+                        ? 'bg-amber-350/20 border-amber-350 text-amber-350'
+                        : 'bg-transparent border-stone-700 text-stone-500 hover:border-stone-500'
+                        }`}
                     >
-                      {c}
+                      {type}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Constraint Toggle */}
+              <div className="w-full">
+                <div className="flex justify-center mb-2">
+                  <button
+                    onClick={() => setShowConstraints(!showConstraints)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${selectedConstraints.length > 0 || showConstraints ? 'bg-amber-350 text-stone-900' : 'bg-black/40 text-stone-300 backdrop-blur-md'}`}
+                  >
+                    <SlidersHorizontal size={14} />
+                    {selectedConstraints.length > 0 ? `${selectedConstraints.length} Filter${selectedConstraints.length > 1 ? 's' : ''}` : 'Kitchen Constraints'}
+                  </button>
+                </div>
+
+                {/* Expandable constraints */}
+                <div className={`overflow-hidden transition-all duration-300 ease-out ${showConstraints ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto p-2">
+                    {CONSTRAINTS.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => toggleConstraint(c)}
+                        className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider border transition-all ${selectedConstraints.includes(c)
+                          ? 'bg-amber-350 border-amber-350 text-stone-900 font-bold'
+                          : 'bg-black/60 border-stone-600 text-stone-400 hover:border-amber-350/50'
+                          }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -313,7 +366,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
               <span className="text-red-100 font-mono text-sm">{formatTime(recordingTime)}</span>
             </div>
           )}
-          
+
           {/* Record Button */}
           <button
             onMouseDown={startRecording}
@@ -323,8 +376,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
             disabled={isProcessing}
             className={`
               relative w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 shadow-xl
-              ${isRecording 
-                ? 'border-red-500 bg-red-500/20 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.4)]' 
+              ${isRecording
+                ? 'border-red-500 bg-red-500/20 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.4)]'
                 : 'border-white/80 hover:border-amber-350 hover:bg-white/10'
               }
               ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -335,7 +388,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onBack, isProc
             ) : (
               <Mic className="w-8 h-8 text-white" />
             )}
-            
+
             {/* Helper Text */}
             {!isRecording && !isProcessing && (
               <span className="absolute -bottom-8 whitespace-nowrap text-stone-400 text-[10px] tracking-widest uppercase">
