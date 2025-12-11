@@ -3,11 +3,7 @@ import { RECIPE_GENERATION_SYSTEM_INSTRUCTION } from "../constants";
 import { Recipe } from "../types";
 
 // Helper to get API key
-const getApiKey = () => {
-  const key = import.meta.env.VITE_GEMINI_API_KEY || '';
-  console.log(`[DEBUG] API Key Length: ${key.length}`);
-  return key;
-};
+const getApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // Define Schema for structured output
 const recipeSchema: Schema = {
@@ -49,7 +45,7 @@ export const generateRecipeFromInput = async (
   textPrompt?: string,
   constraints: string[] = []
 ): Promise<Recipe> => {
-  if (!getApiKey()) throw new Error(`API Key missing (Length: ${getApiKey().length})`);
+  if (!getApiKey()) throw new Error("API Key missing");
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
@@ -136,7 +132,7 @@ export const generateDishImage = async (title: string, description: string): Pro
 };
 
 export const generateTTS = async (text: string): Promise<string> => {
-  if (!getApiKey()) throw new Error(`API Key missing (Length: ${getApiKey().length})`);
+  if (!getApiKey()) throw new Error("API Key missing");
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   try {
