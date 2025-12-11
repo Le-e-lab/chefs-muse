@@ -142,7 +142,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleTextGeneration = async (text: string, mode: GenerationMode = GenerationMode.INSTANT, mealTypes: MealType[] = ['Dinner']) => {
+  const handleTextGeneration = async (text: string, mode: GenerationMode = GenerationMode.INSTANT, mealTypes: MealType[] = ['Dinner'], constraints: string[] = []) => {
     setAppState(AppState.PROCESSING);
     setError(null);
     setErrorDetails(null);
@@ -160,7 +160,7 @@ const App: React.FC = () => {
           null,
           undefined,
           text,
-          [], // Constraints could be added to text input if needed later
+          constraints,
           mealTypes
         );
         setMealPlan(generatedPlan);
@@ -168,7 +168,7 @@ const App: React.FC = () => {
 
       } else {
         // INSTANT
-        const generatedRecipe = await generateRecipeFromInput([], null, undefined, text);
+        const generatedRecipe = await generateRecipeFromInput([], null, undefined, text, constraints);
         setRecipe(generatedRecipe);
         setIsCurrentRecipeSaved(false);
         setAppState(AppState.RECIPE_VIEW);

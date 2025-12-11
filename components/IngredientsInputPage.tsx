@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChefHat, Sparkles, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ChefHat, Sparkles, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { GenerationMode, MealType } from '../types';
 
 interface IngredientsInputPageProps {
     onBack: () => void;
-    onSubmit: (text: string, mode: GenerationMode, mealTypes?: MealType[]) => void;
+    onSubmit: (text: string, mode: GenerationMode, mealTypes?: MealType[], constraints?: string[]) => void;
 }
+
+const CONSTRAINTS = [
+    "Vegetarian", "Vegan", "No Stove", "Microwave Only", "Under 15m", "One Pot", "High Protein", "Low Carb"
+];
 
 const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onSubmit }) => {
     const [input, setInput] = useState('');
     const [mode, setMode] = useState<GenerationMode>(GenerationMode.INSTANT);
     const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>(['Dinner']);
+    const [selectedConstraints, setSelectedConstraints] = useState<string[]>([]);
+    const [showConstraints, setShowConstraints] = useState(false);
 
     const handleSubmit = () => {
         if (input.trim().length > 0) {
             onSubmit(
                 input,
                 mode,
-                mode === GenerationMode.MEAL_PREP ? selectedMealTypes : undefined
+                mode === GenerationMode.MEAL_PREP ? selectedMealTypes : undefined,
+                selectedConstraints
             );
         }
     };
@@ -26,6 +33,12 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
         if (e.key === 'Enter' && e.metaKey) {
             handleSubmit();
         }
+    };
+
+    const toggleConstraint = (c: string) => {
+        setSelectedConstraints(prev =>
+            prev.includes(c) ? prev.filter(i => i !== c) : [...prev, c]
+        );
     };
 
     const toggleMealType = (t: MealType) => {
@@ -79,8 +92,10 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
 
                 <div className="w-full relative group space-y-6">
 
-                    {/* Mode Selector */}
-                    <div className="flex flex-col items-center gap-4 animate-fade-in">
+                    {/* Controls Container */}
+                    <div className="flex flex-col items-center gap-4 animate-fade-in w-full">
+
+                        {/* Mode Selector */}
                         <div className="flex bg-stone-900/80 backdrop-blur-md rounded-full p-1 border border-stone-800">
                             <button
                                 onClick={() => setMode(GenerationMode.INSTANT)}
@@ -98,21 +113,51 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
                             </button>
                         </div>
 
-                        {/* Meal Type Selector */}
-                        <div className={`transition-all duration-300 overflow-hidden ${mode === GenerationMode.MEAL_PREP ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+                        {/* Meal Type Selector (Prep Only) */}
+                        <div className={`transition-all duration-300 overflow-hidden w-full flex justify-center ${mode === GenerationMode.MEAL_PREP ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
                             <div className="flex gap-2 bg-stone-900/50 backdrop-blur-sm p-2 rounded-xl border border-stone-800">
                                 {(['Breakfast', 'Lunch', 'Dinner'] as MealType[]).map(type => (
                                     <button
                                         key={type}
                                         onClick={() => toggleMealType(type)}
                                         className={`px-4 py-2 rounded-lg text-[10px] uppercase font-bold border transition-all ${selectedMealTypes.includes(type)
-                                                ? 'bg-amber-350/20 border-amber-350 text-amber-350'
-                                                : 'bg-transparent border-stone-800 text-stone-500 hover:border-stone-600'
+                                            ? 'bg-amber-350/20 border-amber-350 text-amber-350'
+                                            : 'bg-transparent border-stone-800 text-stone-500 hover:border-stone-600'
                                             }`}
                                     >
                                         {type}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* Constraints Selector */}
+                        <div className="w-full max-w-md">
+                            <div className="flex justify-center mb-2">
+                                <button
+                                    onClick={() => setShowConstraints(!showConstraints)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all ${selectedConstraints.length > 0 || showConstraints ? 'bg-amber-350 text-stone-900' : 'bg-stone-900/50 text-stone-300 border border-stone-800'}`}
+                                >
+                                    <SlidersHorizontal size={14} />
+                                    {selectedConstraints.length > 0 ? `${selectedConstraints.length} Filter${selectedConstraints.length > 1 ? 's' : ''}` : 'Kitchen Constraints'}
+                                </button>
+                            </div>
+
+                            <div className={`overflow-hidden transition-all duration-300 ease-out ${showConstraints ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className="flex flex-wrap justify-center gap-2 p-2">
+                                    {CONSTRAINTS.map(c => (
+                                        <button
+                                            key={c}
+                                            onClick={() => toggleConstraint(c)}
+                                            className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider border transition-all ${selectedConstraints.includes(c)
+                                                ? 'bg-amber-350 border-amber-350 text-stone-900 font-bold'
+                                                : 'bg-stone-900/50 border-stone-800 text-stone-400 hover:border-amber-350/50'
+                                                }`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
