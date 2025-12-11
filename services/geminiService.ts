@@ -72,8 +72,13 @@ export const generateRecipeFromInput = async (
   }
 
   // Construct constraint string
+  // Construct constraint string with stronger emphasis on exclusions
   const constraintText = constraints.length > 0
-    ? `CRITICAL CONSTRAINTS: The user has the following limitations: ${constraints.join(', ')}. You MUST strictly adhere to these. Do not use equipment that is restricted (e.g. if 'No Stove', use microwave, oven, or raw prep only).`
+    ? `CRITICAL CONSTRAINTS: The user has the following limitations: ${constraints.join(', ')}. 
+      
+      IMPORTANT: If a constraint says "Exclude ingredients:", you MUST NOT under any circumstances use those ingredients in the recipe steps, ingredient list, or garnish. Find substitutes or omit them entirely.
+      
+      You MUST strictly adhere to these. Do not use equipment that is restricted (e.g. if 'No Stove', use microwave, oven, or raw prep only).`
     : "";
 
   // Add text prompt or default instruction

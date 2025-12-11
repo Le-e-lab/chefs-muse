@@ -171,7 +171,11 @@ const App: React.FC = () => {
     setError(null);
 
     // Create specific constraint for missing items
-    const exclusionConstraint = `Exclude ingredients: ${missingIngredients.join(', ')}`;
+    const sanitizedIngredients = missingIngredients.map(ing =>
+      ing.replace(/\s*\(.*?\)\s*/g, '').trim()
+    ).filter(Boolean);
+
+    const exclusionConstraint = `Exclude ingredients: ${sanitizedIngredients.join(', ')}`;
     // Keep existing constraints if any, and add the new one
     const currentConstraints = recipe?.constraints || [];
     const newConstraints = [...currentConstraints, exclusionConstraint];
