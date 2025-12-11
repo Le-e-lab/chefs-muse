@@ -25,7 +25,14 @@ const IngredientsInputPage: React.FC<IngredientsInputPageProps> = ({ onBack, onS
         <div className="h-full w-full bg-stone-950 flex flex-col animate-fade-in text-stone-100 relative overflow-hidden">
 
             {/* Background Elements */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-900/5 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-amber-900/10 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] left-[-20%] w-[500px] h-[500px] bg-stone-800/30 rounded-full blur-[80px] pointer-events-none" />
+
+            {/* Floating Icons */}
+            <div className="absolute top-[10%] left-[10%] text-4xl opacity-10 animate-float pointer-events-none">🍅</div>
+            <div className="absolute top-[20%] right-[15%] text-3xl opacity-10 animate-float-delayed pointer-events-none">🌶️</div>
+            <div className="absolute bottom-[20%] left-[15%] text-5xl opacity-5 animate-float-delayed pointer-events-none">🥦</div>
+            <div className="absolute bottom-[10%] right-[20%] text-4xl opacity-10 animate-float pointer-events-none">🍋</div>
 
             {/* Header */}
             <div className="p-6 flex items-center justify-between relative z-10">
