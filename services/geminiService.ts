@@ -3,7 +3,11 @@ import { RECIPE_GENERATION_SYSTEM_INSTRUCTION } from "../constants";
 import { Recipe } from "../types";
 
 // Helper to get API key
-const getApiKey = () => import.meta.env.VITE_GEMINI_API_KEY || '';
+const getApiKey = () => {
+  const key = import.meta.env.VITE_GEMINI_API_KEY || '';
+  console.log(`[DEBUG] API Key Length: ${key.length}`);
+  return key;
+};
 
 // Define Schema for structured output
 const recipeSchema: Schema = {
