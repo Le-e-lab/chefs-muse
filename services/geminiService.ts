@@ -1,16 +1,38 @@
-import { GoogleGenAI, Type, Schema, Modality } from "@google/genai";
+/// <reference types="vite/client" />
+import { createClient } from "@supabase/supabase-js";
+import { Type, Schema, Modality } from "@google/genai";
 import { RECIPE_GENERATION_SYSTEM_INSTRUCTION } from "../constants";
 import { Recipe } from "../types";
 
-// Helper to get API key
-const getApiKey = () => {
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    return import.meta.env.VITE_GEMINI_API_KEY || '';
+// Initialize Supabase Client
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Supabase URL or Anon Key missing. AI features will not work until configured.");
+}
+
+const supabase = createClient(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey || "placeholder"
+);
+
+// Helper to call Edge Function
+const callGeminiEdge = async (model: string, contents: any, config?: any) => {
+  const { data, error } = await supabase.functions.invoke('generate-recipe', {
+    body: { model, contents, config }
+  });
+
+  if (error) {
+    console.error("Supabase Edge Function Error:", error);
+    throw new Error(`Edge Function failed: ${error.message}`);
   }
-  return process.env.VITE_GEMINI_API_KEY || '';
+
+  // The Edge Function returns the full response object
+  return data;
 };
 
-// Define Schema for structured output
+// Define Schema for structured output (Keep existing schema)
 const recipeSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -50,9 +72,6 @@ export const generateRecipeFromInput = async (
   textPrompt?: string,
   constraints: string[] = []
 ): Promise<Recipe> => {
-  if (!getApiKey()) throw new Error("API Key missing");
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const parts: any[] = [];
 
@@ -77,7 +96,6 @@ export const generateRecipeFromInput = async (
   }
 
   // Construct constraint string
-  // Construct constraint string with stronger emphasis on exclusions
   const constraintText = constraints.length > 0
     ? `CRITICAL CONSTRAINTS: The user has the following limitations: ${constraints.join(', ')}. 
       
@@ -92,7 +110,6 @@ export const generateRecipeFromInput = async (
   } else if (!audioBase64) {
     parts.push({ text: `I have these ingredients. ${constraintText} Make me something delicious.` });
   } else {
-    // If audio is present, just append constraints to context
     parts.push({ text: constraintText });
   }
 
@@ -100,14 +117,10 @@ export const generateRecipeFromInput = async (
   parts.push({ text: "Analyze the ingredients and the user request. Create a recipe." });
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: { parts },
-      config: {
-        systemInstruction: RECIPE_GENERATION_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: recipeSchema,
-      }
+    const response = await callGeminiEdge('gemini-flash-latest', [{ parts }], {
+      systemInstruction: RECIPE_GENERATION_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: recipeSchema,
     });
 
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -115,12 +128,11 @@ export const generateRecipeFromInput = async (
 
     const rawRecipe = JSON.parse(text);
 
-    // Enrich with local data
     return {
       ...rawRecipe,
       id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
       createdAt: Date.now(),
-      constraints: constraints // Store constraints in the recipe
+      constraints: constraints
     } as Recipe;
 
   } catch (error) {
@@ -130,31 +142,20 @@ export const generateRecipeFromInput = async (
 };
 
 export const generateDishImage = async (title: string, description: string): Promise<string> => {
-  // Use Pollinations.ai (Free Alternative)
-  // We create a concise, URL-safe prompt
-  const prompt = `professional food photography, ${title}, ${description.split('.')[0]}`.slice(0, 300); // Limit length
+  // Use Pollinations.ai (No API key needed)
+  const prompt = `professional food photography, ${title}, ${description.split('.')[0]}`.slice(0, 300);
   const encodedPrompt = encodeURIComponent(prompt);
-
-  // Return the URL directly. The browser will handle the loading.
-  // We add a random seed to ensure uniqueness if called multiple times.
   const seed = Math.floor(Math.random() * 1000);
   return `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${seed}&width=1024&height=1024&model=flux`;
 };
 
 export const generateTTS = async (text: string): Promise<string> => {
-  if (!getApiKey()) throw new Error("API Key missing");
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' },
-          },
+    const response = await callGeminiEdge("gemini-2.5-flash-preview-tts", [{ parts: [{ text }] }], {
+      responseModalities: [Modality.AUDIO], // Pass enum value, checks serialization
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: { voiceName: 'Kore' },
         },
       },
     });
@@ -182,7 +183,7 @@ const mealPlanSchema: Schema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          day: { type: Type.STRING }, // e.g., "Monday" or "Day 1"
+          day: { type: Type.STRING },
           meals: {
             type: Type.ARRAY,
             items: {
@@ -216,10 +217,8 @@ export const generateMealPlanFromInput = async (
   audioMimeType?: string,
   textPrompt?: string,
   constraints: string[] = [],
-  mealTypes: string[] = ['Dinner'] // Default to Dinner only
+  mealTypes: string[] = ['Dinner']
 ): Promise<any> => {
-  if (!getApiKey()) throw new Error("API Key missing");
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
   const parts: any[] = [];
 
   // Add inputs
@@ -247,13 +246,9 @@ export const generateMealPlanFromInput = async (
   parts.push({ text: systemPrompt });
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest',
-      contents: { parts },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: mealPlanSchema,
-      }
+    const response = await callGeminiEdge('gemini-flash-latest', [{ parts }], {
+      responseMimeType: "application/json",
+      responseSchema: mealPlanSchema,
     });
 
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -269,6 +264,50 @@ export const generateMealPlanFromInput = async (
 
   } catch (error) {
     console.error("Meal Plan Generation Error:", error);
+    throw error;
+  }
+};
+
+export const generateRecipeFromSummary = async (
+  title: string,
+  description: string,
+  constraints: string[] = []
+): Promise<Recipe> => {
+
+  const constraintText = constraints.length > 0 ? `Constraints: ${constraints.join(', ')}.` : "";
+
+  const prompt = `
+    You are expanding a meal plan summary into a full recipe.
+    Title: ${title}
+    Description: ${description}
+    ${constraintText}
+
+    Create a detailed step-by-step recipe for this dish. 
+    Ensure it matches the description EXACTLY.
+    For ingredients, categorize them into 'ingredientsFound' (core items likely to be in a student pantry or the weekly shop) and 'pantryItemsNeeded' (staples like oil, spices).
+  `;
+
+  try {
+    const response = await callGeminiEdge('gemini-flash-latest', [{ parts: [{ text: prompt }] }], {
+      systemInstruction: RECIPE_GENERATION_SYSTEM_INSTRUCTION,
+      responseMimeType: "application/json",
+      responseSchema: recipeSchema,
+    });
+
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error("No response generated");
+
+    const rawRecipe = JSON.parse(text);
+
+    return {
+      ...rawRecipe,
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      createdAt: Date.now(),
+      constraints: constraints
+    } as Recipe;
+
+  } catch (error) {
+    console.error("Recipe Expansion Error:", error);
     throw error;
   }
 };
